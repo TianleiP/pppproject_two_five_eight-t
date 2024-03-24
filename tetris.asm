@@ -112,9 +112,9 @@ initialize_drawgrid:#initialize for drawing grid on line of even idex, say line 
 #$t0 is for offset of the bitmap
 #$t1 is for offset of keyboard input
 #$t2 store 48(line length)
-#$t3 store the left most/or bottom block of the tetramino
-#$t4 keep track of orientation. if $t4 = 0, the tetramino is horizontal, $t3 being the leftmost block
-#if $t4 = 0, the tetramino is vertical, $t3 being the bottom block.
+#$t3 store the address of left most or bottom block of the tetramino
+#$t4 keep track of orientation. There are four orientation, whe t4 is 0 or 2, the tetramino is horizontal. when t4 is 1 or 3, it's vertical
+#if $t4 = 0, 2, $t3 is the address of the leftmost block. if $t4 = 1, 3, $t3 is the address of the bottom block.
 #$t8 is used to check keyboard input
 initialize_game:
      li $t4 0 #default orientation: horizontal
@@ -146,7 +146,6 @@ game_loop:
     
 check_keypress:
 	# 1a. Check if key has been pressed
-	li $t8 0
 	lw $t8, 0($t1)                  # Load first word from keyboard
 	beq $t8, 1, keyboard_input      # If first word 1, key is pressed
 	j game_loop
@@ -164,7 +163,37 @@ keyboard_input:  # A key is pressed
 
 respond_to_d:#move right
     beq $t4, 0, respond_to_d_horizontal
+    beq $t4, 2, respond_to_d_horizontal
     #if not, the tetramino is vertical in orientation, handle the case in another way
+    lw $t5 4($t3)
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    lw $t5 -44($t3)
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    lw $t5 -92($t3)
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    lw $t5 -140($t3)
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    #no collision occur
+    #re-draw field
+    sw $t5 0($t3)
+    sw $t5 -96($t3)
+    lw $t5 4($t3)
+    sw $t5 -48($t3)
+    sw $t5 -144($t3)
+    #draw the tetramino
+    addi $t3 $t3 4
+    sw $a2 0($t3)
+    sw $a2 -48($t3)
+    sw $a2 -96($t3)
+    sw $a2 -144($t3)
+    lw $t5 48($t3)
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    j check_keypress
+    
     
 respond_to_d_horizontal:
     #if the tetramino can move right, it means that the unit at the right side of the tetramino is not wall or other tetramino
@@ -177,13 +206,56 @@ respond_to_d_horizontal:
     sw $a2 4($t3)
     sw $a2 8($t3)
     sw $a2 12($t3)
+    lw $t5 48($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 52($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 56($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 60($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
     j check_keypress
     
     
 respond_to_a:#move left
-    
     beq $t4, 0, respond_to_a_horizontal
+    beq $t4, 2, respond_to_a_horizontal
     #if not, handle the case when tetramino is vertical
+    lw $t5 -4($t3)
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    lw $t5 -52($t3)
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    lw $t5 -100($t3)
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    lw $t5 -148($t3)
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    #no collision occur
+    #re-draw field
+    sw $t5 0($t3)
+    sw $t5 -96($t3)
+    lw $t5 -4($t3)
+    sw $t5 -48($t3)
+    sw $t5 -144($t3)
+    #draw the tetramino
+    addi $t3 $t3 -4
+    sw $a2 0($t3)
+    sw $a2 -48($t3)
+    sw $a2 -96($t3)
+    sw $a2 -144($t3)
+    lw $t5 48($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    j check_keypress
+    
+    
 
 respond_to_a_horizontal:
     #if the tetramino can move left, it means that the unit at the left side of the tetramino is not wall or other tetramino
@@ -196,16 +268,173 @@ respond_to_a_horizontal:
     sw $a2 4($t3)
     sw $a2 8($t3)
     sw $a2 12($t3)
+    lw $t5 48($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 52($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 56($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 60($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
     j check_keypress
 
     
 respond_to_w:#rotation
+    beq $t4, 0, handle_rotation_horizontal0
+    beq $t4, 1, handle_rotation_vertical1
+    beq $t4, 2, handle_rotation_horizontal2
+    beq $t4, 3, handle_rotation_vertical3
+
+handle_rotation_horizontal0: #rotation from horizontal to vertical. clockwise rotation around the second block
+    sub $t6 $t3 $t0 #$t6 = $t3-$t0
+    div $t6, $t2  # Divide $t6 by 48
+    mflo $t6      # Move the quotient from the LO register to $t6
+    beq $t6, $zero check_keypress #this is the first line, we don't make rotation
+    bge $t6, 18, check_keypress#no rotation when line index >= 18
+    addi $t7 $t3 4 #let $t7 be the address of the block of rotation
+    #check if the block above the second block contain existing tetramino
+    lw $t5 -48($t7)
+    beq $t5, $a2, check_keypress#the block above the second block is occupied. no rotation
+    lw $t5 48($t7)
+    beq $t5, $a2, check_keypress#the block under the second block is occupied. no rotation
+    lw $t5 96($t7)
+    beq $t5, $a2, check_keypress#the bottom block of ratation is occupied, no rotation
+    addi $t4 $t4 1
+    #draw colors of grids on the field
+    lw $t5 48($t7)
+    sw $t5 -4($t7)
+    sw $t5 4($t7)
+    lw $t5 96($t7)
+    sw $t5 8($t7)
+    #draw the tetramino
+    sw $a2 -48($t7)
+    sw $a2 48($t7)
+    sw $a2 96($t7)
+    addi $t3 $t7 96#update $t3
+    lw $t5 48($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    j check_keypress
+    
+
+    
+    
+handle_rotation_vertical1:
+    addi $t7 $t3 -96 #let $t7 be the address of block of rotation
+    #check occpupied units by wall or by existing tetramino
+    lw $t5 4($t7)
+    beq $t5 $a0 check_keypress
+    beq $t5 $a2 check_keypress
+    lw $t5 -4($t7) 
+    beq $t5 $a0 check_keypress
+    beq $t5 $a2 check_keypress
+    lw $t5 -8($t7)
+    beq $t5 $a0 check_keypress
+    beq $t5 $a2 check_keypress
+    #we can actually do the rotation
+    addi $t4 $t4 1
+    #re-draw the color of grids
+    lw $t5 -4($t7) 
+    sw $t5 48($t7)
+    sw $t5 -48($t7)
+    lw $t5 -8($t7) 
+    sw $t5 96($t7)
+    #draw the tetramino
+    sw $a2 4($t7)
+    sw $a2 -4($t7)
+    sw $a2 -8($t7)
+    addi $t3 $t7 -8 #update $t3 to the left most unit
+    j check_keypress
+    
+    
+    
+    
+    
+    
+
+handle_rotation_horizontal2:
+    sub $t6 $t3 $t0 #$t6 = $t3-$t0
+    div $t6, $t2  # Divide $t6 by 48
+    mflo $t6      # Move the quotient from the LO register to $t6
+    beq $t6, $zero check_keypress #this is the first line, we don't make rotation
+    beq $t6, 1 check_keypress #this is the second line, we don't make rotation
+    bge $t6, 19, check_keypress#no rotation when line index >= 19
+    addi $t7 $t3 8 #let $t7 be the address of the block of rotation
+    
+    lw $t5 -48($t7)#check if the block above the third block contain existing tetramino
+    beq $t5, $a2, check_keypress#the block above the third block is occupied. no rotation
+    lw $t5 48($t7)
+    beq $t5, $a2, check_keypress#the block under the third block is occupied. no rotation
+    lw $t5 -96($t7)
+    beq $t5, $a2, check_keypress#the top block of ratation is occupied, no rotation
+    addi $t4 $t4 1
+    #draw colors of grids on the field
+    lw $t5 48($t7)
+    sw $t5 -4($t7)
+    sw $t5 4($t7)
+    lw $t5 -96($t7)
+    sw $t5 -8($t7)
+    #draw the tetramino
+    sw $a2 -48($t7)
+    sw $a2 48($t7)
+    sw $a2 -96($t7)
+    addi $t3 $t7 48
+    lw $t5 48($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    j check_keypress
+    
+    
+
+handle_rotation_vertical3:
+    addi $t7 $t3 -48 #let $t7 be the address of block of rotation
+    #check occpupied units by wall or by existing tetramino
+    lw $t5 4($t7)
+    beq $t5 $a0 check_keypress
+    beq $t5 $a2 check_keypress
+    lw $t5 -4($t7) 
+    beq $t5 $a0 check_keypress
+    beq $t5 $a2 check_keypress
+    lw $t5 8($t7)
+    beq $t5 $a0 check_keypress
+    beq $t5 $a2 check_keypress
+    #we can actually do the rotation
+    li $t4 0
+    #re-draw the color of grids
+    lw $t5 -4($t7) 
+    sw $t5 48($t7)
+    sw $t5 -48($t7)
+    lw $t5 8($t7) 
+    sw $t5 -96($t7)
+    #draw the tetramino
+    sw $a2 4($t7)
+    sw $a2 -4($t7)
+    sw $a2 8($t7)
+    addi $t3 $t7 -4 #update $t3 to the left most unit
+    j check_keypress
     
 
 
 respond_to_s:#move down
     beq $t4, 0, respond_to_s_horizontal
+    beq $t4, 2, respond_to_s_horizontal
     #if not, handle the vertical case
+    lw $t5 48($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    sw $t5 -144($t3) #redraw the field
+    #draw the tetramino
+    addi $t3 $t3 48
+    sw $a2 0($t3)
+    lw $t5 48($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    j check_keypress
+    
     
 respond_to_s_horizontal:
     #if the tetramino can move down, it means that the units below the tetramino are not wall or other tetramino
@@ -233,6 +462,19 @@ respond_to_s_horizontal:
     sw $a2 4($t3)
     sw $a2 8($t3)
     sw $a2 12($t3)
+    
+    lw $t5 48($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 52($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 56($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 60($t3)
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
     j check_keypress
     
     
