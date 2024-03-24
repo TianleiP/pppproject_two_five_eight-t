@@ -99,14 +99,14 @@ initialize_drawgrid:#initialize for drawing grid on line of even idex, say line 
  
  draw_grid:
     bge $t4, 5, reset_lopp_drawgrid
-    bge $t3, 10, game_loop#after finishing the grid, we successfully set up th bitmap and go to the game loop
+    bge $t3, 10, initialize_game#after finishing the grid, we successfully set up th bitmap and go to the game loop
     addi $t4 $t4 1
     sw $a1 0($t5)
     sw $a1 0($t6)
     addi $t5 $t5 8
     addi $t6 $t6 8
     j draw_grid
- #initialize end
+ #the field is drawn
  
 
 #$t0 is for offset of the bitmap
@@ -116,50 +116,132 @@ initialize_drawgrid:#initialize for drawing grid on line of even idex, say line 
 #$t4 keep track of orientation. if $t4 = 0, the tetramino is horizontal, $t3 being the leftmost block
 #if $t4 = 0, the tetramino is vertical, $t3 being the bottom block.
 #$t8 is used to check keyboard input
+initialize_game:
+     li $t4 0 #default orientation: horizontal
+     li $t3 16#address of the first unit of the tetramino
+     add $t3 $t3 $t0
+     #draw the tetramino at the top of the bitmap
+        sw $a2 0($t3)
+        sw $a2 4($t3)
+        sw $a2 8($t3)
+        sw $a2 12($t3)
+     j game_loop
+
 game_loop:
     #draw grid at the top
-    li $t4 0 #default orientation: horizontal
-    li $t3 16#address of the first unit of the tetramino
-    add $t3 $t3 $t0
-    #draw the tetramino at the top of the bitmap
-    sw $a2 0($t3)
-    sw $a2 4($t3)
-    sw $a2 8($t3)
-    sw $a2 12($t3)
+    #here, we need to check if there is any complete line. if there is, need to do sth to update/redraw the field
+    #code to check complete lines
+    #... basic idea: loop thourgh the whole field from line 19 to line 0
+    #if this line is not complete: go to the line above and check
+    
+    #else: go to a helper function that let all the red blocks above this line drop by one unit, then check the same line again in next iteration.
+    
+    #Helper function that "drop" blocks: basic idea: a nested loop that loop through all units within and above this line
+    
+    #for any particular line, we loop though all its units. For any unit, if the unit above this unit is red, make this unit red. 
+    #if the unit above this unit is white, make this unit black. if the unit above is black, make this unit white. 
+    
+    #after finishing looping on this line, loop thourgh the line above and do the same thing.
+    
+    j check_keypress
     
     
+check_keypress:
 	# 1a. Check if key has been pressed
-	lw $t8, 0($t0)                  # Load first word from keyboard
+	li $t8 0
+	lw $t8, 0($t1)                  # Load first word from keyboard
 	beq $t8, 1, keyboard_input      # If first word 1, key is pressed
+	j game_loop
 
 keyboard_input:  # A key is pressed
-    lw $t9, 4($t0)                  # Load second word from keyboard
+    lw $t9, 4($t1)                  # Load second word from keyboard
     # 1b. Check which key has been pressed
     beq $t9, 100, respond_to_d     # Check if the key d was pressed
     beq $t9, 97, respond_to_a        # Check if the key a was pressed
     beq $t9, 119, respond_to_w       # Check if the key w was pressed
     beq $t9, 115, respond_to_s       # Check if the key s was pressed
+    
+    j exit
 
 
 respond_to_d:#move right
-   
+    beq $t4, 0, respond_to_d_horizontal
+    #if not, the tetramino is vertical in orientation, handle the case in another way
     
+respond_to_d_horizontal:
+    #if the tetramino can move right, it means that the unit at the right side of the tetramino is not wall or other tetramino
+    lw $t5 16($t3)#retrive the color at the unit on the right side of the tetramino
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    sw $t5 0($t3)#maintain color of the grid cells
+    addi $t3 $t3 4
+    sw $a2 0($t3)#draw in new location
+    sw $a2 4($t3)
+    sw $a2 8($t3)
+    sw $a2 12($t3)
+    j check_keypress
     
     
 respond_to_a:#move left
+    
+    beq $t4, 0, respond_to_a_horizontal
+    #if not, handle the case when tetramino is vertical
+
+respond_to_a_horizontal:
+    #if the tetramino can move left, it means that the unit at the left side of the tetramino is not wall or other tetramino
+    lw $t5 -4($t3)#retrive the color at the unit on the left side of the tetramino
+    beq $t5, $a0, check_keypress#collide with the wall
+    beq $t5, $a2, check_keypress#collide with existing tetramino
+    sw $t5 12($t3)#maintain color of the grid cells
+    addi $t3 $t3 -4
+    sw $a2 0($t3)#draw in new location
+    sw $a2 4($t3)
+    sw $a2 8($t3)
+    sw $a2 12($t3)
+    j check_keypress
 
     
 respond_to_w:#rotation
+    
 
 
 respond_to_s:#move down
+    beq $t4, 0, respond_to_s_horizontal
+    #if not, handle the vertical case
+    
+respond_to_s_horizontal:
+    #if the tetramino can move down, it means that the units below the tetramino are not wall or other tetramino
+    lw $t5 48($t3)#retrive the color at the unit below the tetramino
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 52($t3)#retrive the color at the unit below the tetramino
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 56($t3)#retrive the color at the unit below the tetramino
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t5 60($t3)#retrive the color at the unit below the tetramino
+    beq $t5, $a0, initialize_game#collide with the wall
+    beq $t5, $a2, initialize_game#collide with existing tetramino
+    lw $t6 48($t3)#store the color below the leftmost unit ot the tetramino
+    sw $t5 0($t3)#here, t5 is the color just below the right most unit of the tetramino
+    sw $t5 0($t3)
+    sw $t5 8($t3)
+    sw $t6 4($t3)
+    sw $t6 12($t3)
+    
+    addi $t3 $t3 48
+    sw $a2 0($t3)#draw in new location
+    sw $a2 4($t3)
+    sw $a2 8($t3)
+    sw $a2 12($t3)
+    j check_keypress
+    
+    
+    
 
-    # 2a. Check for collisions
-	# 2b. Update locations (paddle, ball)
-	# 3. Draw the screen
-	# 4. Sleep
 
-    #5. Go back to 1
-    b game_loop
+   
+
 
 exit:
