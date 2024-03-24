@@ -128,19 +128,17 @@ initialize_game:
      j game_loop
 
 game_loop:
-    #draw grid at the top
-    #here, we need to check if there is any complete line. if there is, need to do sth to update/redraw the field
+
+    #here, we need to check if there is any complete line. if there is, need to do something to update/redraw the field
     #code to check complete lines
-    #... basic idea: loop thourgh the whole field from line 19 to line 0
+    #... basic idea for handling complete line: loop thourgh the whole field from line 19 to line 0
     #if this line is not complete: go to the line above and check
-    
     #else: go to a helper function that let all the red blocks above this line drop by one unit, then check the same line again in next iteration.
     
     #Helper function that "drop" blocks: basic idea: a nested loop that loop through all units within and above this line
     
     #for any particular line, we loop though all its units. For any unit, if the unit above this unit is red, make this unit red. 
-    #if the unit above this unit is white, make this unit black. if the unit above is black, make this unit white. 
-    
+    #if the unit above this unit is grey, make this unit black. if the unit above is grey, make this unit white. 
     #after finishing looping on this line, loop thourgh the line above and do the same thing.
     
     j check_keypress
