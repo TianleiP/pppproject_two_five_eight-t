@@ -38,9 +38,9 @@ main:
 
 #initialize the game
 #two register that store color
-li $a0, 0x0000ff #for painting wall
-li $a1, 0x1f1f1f#for painting grids
-li $a2, 0xff0000#for drawing the tetramino
+li $a0, 0x0000ff #for painting wall, blue
+li $a1, 0x1f1f1f#for painting grids, grey
+li $a2, 0xff0000#for drawing the tetramino, red
 # for tracking if it reach the end of the row
 lw $t1, ADDR_KBRD
 # Starting address for the display
@@ -99,48 +99,52 @@ initialize_drawgrid:#initialize for drawing grid on line of even idex, say line 
  
  draw_grid:
     bge $t4, 5, reset_lopp_drawgrid
-    bge $t3, 10, initialize_game#after finishing the grid, we successfully set up th bitmap and go to the game loop
+    bge $t3, 10, game_loop#after finishing the grid, we successfully set up th bitmap and go to the game loop
     addi $t4 $t4 1
     sw $a1 0($t5)
     sw $a1 0($t6)
     addi $t5 $t5 8
     addi $t6 $t6 8
     j draw_grid
+    
+    
  #the field is drawn
  
-
+#variable usage: 
 #$t0 is for offset of the bitmap
 #$t1 is for offset of keyboard input
 #$t2 store 48(line length)
 #$t3 store the address of left most or bottom block of the tetramino
 #$t4 keep track of orientation. There are four orientation, whe t4 is 0 or 2, the tetramino is horizontal. when t4 is 1 or 3, it's vertical
 #if $t4 = 0, 2, $t3 is the address of the leftmost block. if $t4 = 1, 3, $t3 is the address of the bottom block.
-#$t8 is used to check keyboard input
-initialize_game:
-     li $t4 0 #default orientation: horizontal
-     li $t3 16#address of the first unit of the tetramino
-     add $t3 $t3 $t0
-     #draw the tetramino at the top of the bitmap
-        sw $a2 0($t3)
-        sw $a2 4($t3)
-        sw $a2 8($t3)
-        sw $a2 12($t3)
-     j game_loop
+# $t8 is used to check keyboard input
 
 game_loop:
-
-    #here, we need to check if there is any complete line. if there is, need to do something to update/redraw the field
-    #code to check complete lines
+    #for the remaining portion of milestone 3:
+    #Before start moving tetraminos, we need to check if there is any complete line. if there is, need to do something to update/redraw the field
+    
     #... basic idea for handling complete line: loop thourgh the whole field from line 19 to line 0
     #if this line is not complete: go to the line above and check
     #else: go to a helper function that let all the red blocks above this line drop by one unit, then check the same line again in next iteration.
     
     #Helper function that "drop" blocks: basic idea: a nested loop that loop through all units within and above this line
     
-    #for any particular line, we loop though all its units. For any unit, if the unit above this unit is red, make this unit red. 
-    #if the unit above this unit is grey, make this unit black. if the unit above is grey, make this unit white. 
+    #for any line, we loop though all its units(besides the wall). For any unit, if the unit above this unit is red, make this unit red. 
+    #if the unit above this unit is while, make this unit grey. if the unit above is grey, make this unit white. 
     #after finishing looping on this line, loop thourgh the line above and do the same thing.
     
+     li $t4 0 #default orientation: horizontal
+     li $t3 16#address of the first unit of the tetramino
+     add $t3 $t3 $t0
+     #draw the tetramino at the top of the bitmap
+     sw $a2 0($t3)
+     sw $a2 4($t3)
+     sw $a2 8($t3)
+     sw $a2 12($t3)
+     
+     j move
+    
+move:#use to make moves for tetraminos
     j check_keypress
     
     
@@ -148,7 +152,7 @@ check_keypress:
 	# 1a. Check if key has been pressed
 	lw $t8, 0($t1)                  # Load first word from keyboard
 	beq $t8, 1, keyboard_input      # If first word 1, key is pressed
-	j game_loop
+	j move
 
 keyboard_input:  # A key is pressed
     lw $t9, 4($t1)                  # Load second word from keyboard
@@ -191,7 +195,7 @@ respond_to_d:#move right
     sw $a2 -96($t3)
     sw $a2 -144($t3)
     lw $t5 48($t3)
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a2, game_loop#collide with existing tetramino
     j check_keypress
     
     
@@ -207,17 +211,17 @@ respond_to_d_horizontal:
     sw $a2 8($t3)
     sw $a2 12($t3)
     lw $t5 48($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 52($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 56($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 60($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     j check_keypress
     
     
@@ -251,8 +255,8 @@ respond_to_a:#move left
     sw $a2 -96($t3)
     sw $a2 -144($t3)
     lw $t5 48($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     j check_keypress
     
     
@@ -269,17 +273,17 @@ respond_to_a_horizontal:
     sw $a2 8($t3)
     sw $a2 12($t3)
     lw $t5 48($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 52($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 56($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 60($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     j check_keypress
 
     
@@ -316,8 +320,8 @@ handle_rotation_horizontal0: #rotation from horizontal to vertical. clockwise ro
     sw $a2 96($t7)
     addi $t3 $t7 96#update $t3
     lw $t5 48($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     j check_keypress
     
 
@@ -384,8 +388,8 @@ handle_rotation_horizontal2:
     sw $a2 -96($t7)
     addi $t3 $t7 48
     lw $t5 48($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     j check_keypress
     
     
@@ -424,32 +428,32 @@ respond_to_s:#move down
     beq $t4, 2, respond_to_s_horizontal
     #if not, handle the vertical case
     lw $t5 48($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     sw $t5 -144($t3) #redraw the field
     #draw the tetramino
     addi $t3 $t3 48
     sw $a2 0($t3)
     lw $t5 48($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     j check_keypress
     
     
 respond_to_s_horizontal:
     #if the tetramino can move down, it means that the units below the tetramino are not wall or other tetramino
     lw $t5 48($t3)#retrive the color at the unit below the tetramino
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 52($t3)#retrive the color at the unit below the tetramino
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 56($t3)#retrive the color at the unit below the tetramino
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 60($t3)#retrive the color at the unit below the tetramino
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t6 48($t3)#store the color below the leftmost unit ot the tetramino
     sw $t5 0($t3)#here, t5 is the color just below the right most unit of the tetramino
     sw $t5 0($t3)
@@ -464,17 +468,17 @@ respond_to_s_horizontal:
     sw $a2 12($t3)
     
     lw $t5 48($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 52($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 56($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     lw $t5 60($t3)
-    beq $t5, $a0, initialize_game#collide with the wall
-    beq $t5, $a2, initialize_game#collide with existing tetramino
+    beq $t5, $a0, game_loop#collide with the wall
+    beq $t5, $a2, game_loop#collide with existing tetramino
     j check_keypress
     
     
