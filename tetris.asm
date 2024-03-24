@@ -130,9 +130,18 @@ game_loop:
     #Helper function that "drop" blocks: basic idea: a nested loop that loop through all units within and above this line
     
     #for any line, we loop though all its units(besides the wall). For any unit, if the unit above this unit is red, make this unit red. 
-    #if the unit above this unit is while, make this unit grey. if the unit above is grey, make this unit white. 
+    #if the unit above this unit is black, make this unit grey. if the unit above is grey, make this unit black. 
     #after finishing looping on this line, loop thourgh the line above and do the same thing.
     
+    #after the helper function loops thourgh all lines, it jumps back to the original function that call this helper
+    
+    #$a0, $a1, $a2, $t0, $t1, $t2 are used to store some basic numbers/addresses (check line41-49), so don't alter the content of these registers
+    
+    
+    #the codes below are for drawing, moving, handling collision with wall and other tetraminos
+    #You most likely don't need to look at these codes, it won't affect the implementation of removing lines.
+    
+    #set up for moving tetraminos
      li $t4 0 #default orientation: horizontal
      li $t3 16#address of the first unit of the tetramino
      add $t3 $t3 $t0
