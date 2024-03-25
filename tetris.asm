@@ -112,48 +112,118 @@ draw_grid:
     #if $t4 = 0, 2, $t3 is the address of the leftmost block. if $t4 = 1, 3, $t3 is the address of the bottom block.
 #$t8 is used to check keyboard input
 
+
 game_loop:
-    #for the remaining portion of milestone 3:
-    #Before start moving tetraminos, we need to check if there is any complete line. if there is, need to do something to update/redraw the field
-    
-    #... basic idea for handling complete line: loop through the whole field from line 19 to line 0
-    #if this line is not complete: go to the line above and check
-    #else: go to a helper function that let all the red blocks above this line drop by one unit, then check the same line again in next iteration.
-    
-    #Helper function that "drop" blocks: basic idea: a nested loop that loop through all units within and above this line
-    
-    #for any line, we loop though all its units(besides the wall). For any unit, if the unit above this unit is red, make this unit red. 
-    #if the unit above this unit is black, make this unit grey. if the unit above is grey, make this unit black. 
-    #after finishing looping on this line, loop thourgh the line above and do the same thing.
-    
-    #after the helper function loops thourgh all lines, it jumps back to the original function that call this helper
+
     
     #$a0, $a1, $a2, $t0, $t1, $t2 are used to store some basic numbers/addresses (check line41-49), so don't alter the content of these registers
     
     
     #the codes below are for drawing, moving, handling collision with wall and other tetraminos
     #You most likely don't need to look at these codes, it won't affect the implementation of removing lines.
+    j initialize_check_lines
+initialize_check_lines:
+    li $t5 19 #keep track of line number, loop from 19 to 0
+    li $t4 0#keep track the number of unit we check in each line(0-10)
+    li $t3 0
+    add $t3 $t3 $t0#starting position
+    addi $t3 $t3 916#second unit at the 20th row(skip the wall)
     
-    #set up for moving tetraminos
-     li $t4 0       #default orientation: horizontal
-     li $t3 16      #address of the first unit of the tetramino
+    j check_lines
+
+reset_check_lines:
+    addi $t5 $t5 -1
+    beq $t5 0 move #when we reach line 0, exit the loop
+    mult $t3 $t5 $t2 #t3 = t5*48
+    add $t3 $t3 $t0
+    addi $t3 $t3 4
+    li $t4 0
+    j check_lines
+    
+    
+check_lines:
+    beq $t4 10 erase
+    lw $t6 0($t3)
+    addi $t4 $t4 1
+    addi $t3 $t3 4
+    beq $t6 $a1 reset_check_lines
+    beq $t6 0x000000 reset_check_lines
+    j check_lines
+    
+erase:
+    #at this point, $t5 is storing the current line number
+    # I will reset the address store in $t3
+    mult $t3 $t5 $t2 #t3 = t5*48
+    add $t3 $t3 $t0
+    addi $t3 $t3 4#skip the wall
+    add $t6 $zero $t5#t6 is a temporary variable that stores the line num so we dont need to change the content of $t5
+    li $t4 0#when $t4 go to 10, we jump to the line above
+    j erase_loop
+
+reset_erase_loop:
+    addi $t6 $t6 -1
+    beq $t6 0 back_to_checkline
+    li $t4 0
+    mult $t3 $t6 $t2 #t3 = t6*48
+    add $t3 $t3 $t0
+    addi $t3 $t3 4
+    j erase_loop
+    
+
+erase_loop:
+    beq $t4 10 reset_erase_loop
+    
+    lw $t7 -48($t3)
+    beq $t7 0x000000 draw_grey
+    beq $t7 $a2 draw_red
+    beq $t7 $a1 draw_black
+continue_erase_loop:
+    addi $t3 $t3 4
+    addi $t4 $t4 1
+    j erase_loop
+    
+
+draw_grey:
+    sw $a1 0($t3)
+    j continue_erase_loop
+
+draw_black:
+    li $a3 0x00000
+    sw $a3 0($t3)
+    j continue_erase_loop
+
+draw_red:
+    sw $a2 0($t3)
+    j continue_erase_loop
+    
+    
+    
+    
+back_to_checkline:
+    mult $t3 $t5 $t2 #t3 = t5*48
+    add $t3 $t3 $t0
+    addi $t3 $t3 4
+    li $t4 0
+    j check_lines
+    
+    
+    
+move:#use to make moves for tetraminos
+#set up for moving tetraminos
+     li $t4 0 #default orientation: horizontal
+     li $t3 16#address of the first unit of the tetramino
      add $t3 $t3 $t0
-     
      #draw the tetramino at the top of the bitmap
      sw $a2 0($t3)
      sw $a2 4($t3)
      sw $a2 8($t3)
      sw $a2 12($t3)
-     
-     j move
-    
-move:       #use to make moves for tetraminos
     j check_keypress
     
 check_keypress:     #check if key has been pressed
 	lw $t8, 0($t1)                  #load first word from keyboard
 	beq $t8, 1, keyboard_input      #if first word 1, key is pressed
-	j move
+	j check_keypress
 
 keyboard_input:  #a key is pressed
     lw $t9, 4($t1)                  #load second word from keyboard
