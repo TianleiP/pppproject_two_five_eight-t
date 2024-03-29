@@ -21,6 +21,9 @@ ADDR_DSPL:
 # The address of the keyboard. Don't forget to connect it!
 ADDR_KBRD:
     .word 0xffff0000
+    
+pause_symbol:
+    .space 32
 
 ##############################################################################
 # Mutable Data
@@ -219,6 +222,91 @@ check_keypress:     #check if key has been pressed
 	beq $t8, 1, keyboard_input      #if first word 1, key is pressed
 	j check_keypress
 
+check_unpause:
+    lw $t8, 0($t1)      #load first word from keyboard
+	beq $t8, 1, check_p        #check if the key pressed is p
+	j check_unpause
+    
+check_p:
+    lw $t9, 4($t1)      #load next key press from keyboard
+    beq $t9, 112, unpause       #if key is p, unpause
+    j check_unpause     #reloop and keep checking for p
+
+unpause:
+    jal remove_pause_symbol
+    j check_keypress        #resume game
+
+respond_to_p:
+    jal draw_pause_symbol
+    j check_unpause     #start pause loop
+    
+draw_pause_symbol:
+    #initialize pause symbol stuff
+    li $a3, 0xffffff
+    li $s2, 400
+    add $s2, $s2, $t0
+    la $s5, pause_symbol    
+    #save first line
+    lw $s1, 0($s2)
+    sw $s1, 0($s5)
+    lw $s1, 48($s2)
+    sw $s1, 4($s5)
+    lw $s1,96($s2)
+    sw $s1, 8($s5)
+    lw $s1, 144($s2)
+    sw $s1, 12($s5)
+    #save second line
+    lw $s1, 12($s2)
+    sw $s1, 16($s5)
+    lw $s1, 60($s2)
+    sw $s1, 20($s5)
+    lw $s1, 108($s2)
+    sw $s1, 24($s5)
+    lw $s1, 156($s2)
+    sw $s1, 28($s5)
+    #draw line 1
+    li $s1, 400
+    add $s1, $s1, $t0
+    sw $a3, 0($s1)
+    sw $a3, 48($s1)
+    sw $a3, 96($s1)
+    sw $a3, 144($s1)
+    #draw line 2
+    sw $a3, 12($s1)
+    sw $a3, 60($s1)
+    sw $a3, 108($s1)
+    sw $a3, 156($s1)
+    
+    lw $t1, ADDR_KBRD
+
+    jr $ra
+    
+
+remove_pause_symbol:
+    li $s1, 400
+    add $s1, $s1, $t0
+    la $s5, pause_symbol
+    #redraw original unit colors for line 1
+    lw $s2, 0($s5)
+    sw $s2, 0($s1)
+    lw $s2, 4($s5)
+    sw $s2, 48($s1)
+    lw $s2, 8($s5)
+    sw $s2, 96($s1)
+    lw $s2, 12($s5)
+    sw $s2, 144($s1)
+    #redraw original unit colors for line 2
+    lw $s2, 16($s5)
+    sw $s2, 12($s1)
+    lw $s2, 20($s5)
+    sw $s2, 60($s1)
+    lw $s2, 24($s5)
+    sw $s2, 108($s1)
+    lw $s2, 28($s5)
+    sw $s2, 156($s1)
+    
+    jr $ra    
+
 keyboard_input:  #a key is pressed
     lw $t9, 4($t1)                  #load second word from keyboard
     #check which key has been pressed
@@ -227,6 +315,7 @@ keyboard_input:  #a key is pressed
     beq $t9, 97, respond_to_a        #check if the key a was pressed
     beq $t9, 119, respond_to_w       #check if the key w was pressed
     beq $t9, 115, respond_to_s       #check if the key s was pressed
+    beq $t9, 112, respond_to_p
     
     j exit
 
@@ -551,7 +640,6 @@ respond_to_q:
     li $v0, 10      #quit game
 	syscall
     
-
 
    
 
