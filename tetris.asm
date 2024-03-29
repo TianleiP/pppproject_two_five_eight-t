@@ -42,6 +42,7 @@ main:
 li $a0, 0x0000ff        #store blue for painting wall
 li $a1, 0x1f1f1f        #store grey for painting grids
 li $a2, 0xff0000        #store red for drawing the tetramino
+li $s3, 0       #initialize time decreaser with 0
 
 #address for the keyboard
 lw $t1, ADDR_KBRD
@@ -221,14 +222,22 @@ move:#use to make moves for tetraminos
 check_keypress:     #check if key has been pressed
 	lw $t8, 0($t1)                  #load first word from keyboard
 	beq $t8, 1, keyboard_input      #if first word 1, key is pressed
-	j delay_one_second     #add time delay for gravity
+	j delay_one_second     #time delay for gravity
 	
 delay_one_second:
     li $t7, 0                #initialize counter
-    li $t9, 10000000         #set up a large loop count for time
+    li $t9, 10000000         #set up loop count for time
+    sub $t9, $t9, $s3       #subtract value from loop counter to decrease time loop for current speed
+    bge $t9, 1000001, shorten_delay     #if time loop is greater than 1000001 shorten delay loop(increase speed)
+
     jal delay_loop      #start delay loop
 
     j check_keypress        #jump to key input when loop is complete
+    
+shorten_delay:      #decrease delay to increase speed
+    addi $s3, $s3, 10000       #increment value to subtract from time loop(increase speed); change this value to increase/decrease speed acceler
+    jal delay_loop      #start delay loop
+    j check_keypress
     
 delay_loop:
     addi $t7, $t7, 1        #increment counter
