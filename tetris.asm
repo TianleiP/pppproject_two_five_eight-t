@@ -21,6 +21,9 @@ ADDR_DSPL:
 # The address of the keyboard. Don't forget to connect it!
 ADDR_KBRD:
     .word 0xffff0000
+    
+pause_symbol:
+    .space 32
 
 ##############################################################################
 # Mutable Data
@@ -121,91 +124,85 @@ game_loop:
     
     #the codes below are for drawing, moving, handling collision with wall and other tetraminos
     #You most likely don't need to look at these codes, it won't affect the implementation of removing lines.
-    j initialize_check_lines
-initialize_check_lines:
-    li $t5 19 #keep track of line number, loop from 19 to 0
-    li $t4 0#keep track the number of unit we check in each line(0-10)
-    li $t3 0
-    add $t3 $t3 $t0#starting position
-    addi $t3 $t3 916#second unit at the 20th row(skip the wall)
     
+    j initialize_check_lines
+    
+initialize_check_lines:     #initialize values for check_lines loop
+    li $t5 19       #keep track of line number, loop from 19 to 0
+    li $t4 0        #keep track the number of unit we check in each line(0-10)
+    li $t3 0
+    add $t3 $t3 $t0
+    addi $t3 $t3 916        #second unit at the 20th row(skip the wall)
     j check_lines
 
 reset_check_lines:
-    addi $t5 $t5 -1
-    beq $t5 0 move #when we reach line 0, exit the loop
-    mult $t3 $t5 $t2 #t3 = t5*48
-    add $t3 $t3 $t0
-    addi $t3 $t3 4
-    li $t4 0
+    addi $t5 $t5 -1     #decrement row counter for next row
+    beq $t5 0 move      #when we reach line 0, exit the loop
+    mult $t3 $t5 $t2        #t3 = t5*48, start of current row
+    add $t3 $t3 $t0     #offset by display address
+    addi $t3 $t3 4      #incremement unit position(next unit)
+    li $t4 0        #initialize red units counter to 0
     j check_lines
     
-    
-check_lines:
-    beq $t4 10 erase
-    lw $t6 0($t3)
-    addi $t4 $t4 1
-    addi $t3 $t3 4
-    beq $t6 $a1 reset_check_lines
+check_lines:        #checks the current row
+    beq $t4 10 erase        #check if all units have been red, then erase
+    lw $t6 0($t3)       #initialize current position to $t6
+    addi $t4 $t4 1      #increment number of units
+    addi $t3 $t3 4      #increment current unit position
+    beq $t6 $a1 reset_check_lines       #if current unit is grey start on next line
     beq $t6 0x000000 reset_check_lines
     j check_lines
     
 erase:
     #at this point, $t5 is storing the current line number
     # I will reset the address store in $t3
-    mult $t3 $t5 $t2 #t3 = t5*48
-    add $t3 $t3 $t0
-    addi $t3 $t3 4#skip the wall
-    add $t6 $zero $t5#t6 is a temporary variable that stores the line num so we dont need to change the content of $t5
-    li $t4 0#when $t4 go to 10, we jump to the line above
+    mult $t3 $t5 $t2        #t3 = t5*48
+    add $t3 $t3 $t0     #first unit in row to erase
+    addi $t3 $t3 4      #skip the wall
+    add $t6 $zero $t5       #t6 is a temporary variable that stores the line num so we dont need to change the content of $t5
+    li $t4 0        #when $t4 go to 10, we jump to the line above
     j erase_loop
 
 reset_erase_loop:
-    addi $t6 $t6 -1
-    beq $t6 0 back_to_checkline
+    addi $t6 $t6 -1     #decrement row number
+    beq $t6 0 back_to_checkline     #if back at first row, reset and start checking rows again
     li $t4 0
     mult $t3 $t6 $t2 #t3 = t6*48
     add $t3 $t3 $t0
     addi $t3 $t3 4
     j erase_loop
     
-
 erase_loop:
-    beq $t4 10 reset_erase_loop
-    
-    lw $t7 -48($t3)
+    beq $t4 10 reset_erase_loop     #if erase loop has completed the row, reset
+    lw $t7 -48($t3)     #check row above to move it down
     beq $t7 0x000000 draw_grey
     beq $t7 $a2 draw_red
     beq $t7 $a1 draw_black
-continue_erase_loop:
+    
+continue_erase_loop:        #increment values and continue erasing
     addi $t3 $t3 4
     addi $t4 $t4 1
     j erase_loop
     
-
-draw_grey:
+draw_grey:      #paint the unit grey 
     sw $a1 0($t3)
     j continue_erase_loop
 
-draw_black:
+draw_black:     #paint the unit black
     li $a3 0x00000
     sw $a3 0($t3)
     j continue_erase_loop
 
-draw_red:
+draw_red:       #paint the unit red
     sw $a2 0($t3)
     j continue_erase_loop
     
-    
-    
-    
-back_to_checkline:
+back_to_checkline:      #start again at beginning row
     mult $t3 $t5 $t2 #t3 = t5*48
     add $t3 $t3 $t0
     addi $t3 $t3 4
     li $t4 0
     j check_lines
-    
     
     
 move:#use to make moves for tetraminos
@@ -225,13 +222,100 @@ check_keypress:     #check if key has been pressed
 	beq $t8, 1, keyboard_input      #if first word 1, key is pressed
 	j check_keypress
 
+check_unpause:
+    lw $t8, 0($t1)      #load first word from keyboard
+	beq $t8, 1, check_p        #check if the key pressed is p
+	j check_unpause
+    
+check_p:
+    lw $t9, 4($t1)      #load next key press from keyboard
+    beq $t9, 112, unpause       #if key is p, unpause
+    j check_unpause     #reloop and keep checking for p
+
+unpause:
+    jal remove_pause_symbol
+    j check_keypress        #resume game
+
+respond_to_p:
+    jal draw_pause_symbol
+    j check_unpause     #start pause loop
+    
+draw_pause_symbol:
+    #initialize pause symbol stuff
+    li $a3, 0xffffff
+    li $s2, 400
+    add $s2, $s2, $t0
+    la $s5, pause_symbol    
+    #save first line
+    lw $s1, 0($s2)
+    sw $s1, 0($s5)
+    lw $s1, 48($s2)
+    sw $s1, 4($s5)
+    lw $s1,96($s2)
+    sw $s1, 8($s5)
+    lw $s1, 144($s2)
+    sw $s1, 12($s5)
+    #save second line
+    lw $s1, 12($s2)
+    sw $s1, 16($s5)
+    lw $s1, 60($s2)
+    sw $s1, 20($s5)
+    lw $s1, 108($s2)
+    sw $s1, 24($s5)
+    lw $s1, 156($s2)
+    sw $s1, 28($s5)
+    #draw line 1
+    li $s1, 400
+    add $s1, $s1, $t0
+    sw $a3, 0($s1)
+    sw $a3, 48($s1)
+    sw $a3, 96($s1)
+    sw $a3, 144($s1)
+    #draw line 2
+    sw $a3, 12($s1)
+    sw $a3, 60($s1)
+    sw $a3, 108($s1)
+    sw $a3, 156($s1)
+    
+    lw $t1, ADDR_KBRD
+
+    jr $ra
+    
+
+remove_pause_symbol:
+    li $s1, 400
+    add $s1, $s1, $t0
+    la $s5, pause_symbol
+    #redraw original unit colors for line 1
+    lw $s2, 0($s5)
+    sw $s2, 0($s1)
+    lw $s2, 4($s5)
+    sw $s2, 48($s1)
+    lw $s2, 8($s5)
+    sw $s2, 96($s1)
+    lw $s2, 12($s5)
+    sw $s2, 144($s1)
+    #redraw original unit colors for line 2
+    lw $s2, 16($s5)
+    sw $s2, 12($s1)
+    lw $s2, 20($s5)
+    sw $s2, 60($s1)
+    lw $s2, 24($s5)
+    sw $s2, 108($s1)
+    lw $s2, 28($s5)
+    sw $s2, 156($s1)
+    
+    jr $ra    
+
 keyboard_input:  #a key is pressed
     lw $t9, 4($t1)                  #load second word from keyboard
     #check which key has been pressed
+    beq $t9, 113, respond_to_q      #check if the key q was pressed
     beq $t9, 100, respond_to_d     #check if the key d was pressed
     beq $t9, 97, respond_to_a        #check if the key a was pressed
     beq $t9, 119, respond_to_w       #check if the key w was pressed
     beq $t9, 115, respond_to_s       #check if the key s was pressed
+    beq $t9, 112, respond_to_p
     
     j exit
 
@@ -552,9 +636,10 @@ respond_to_s_horizontal:
     beq $t5, $a2, game_loop     #collide with existing tetramino
     j check_keypress
     
+respond_to_q:
+    li $v0, 10      #quit game
+	syscall
     
-    
-
 
    
 
