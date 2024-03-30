@@ -118,7 +118,7 @@ draw_grid:
 
 
 game_loop:
-
+    jal block_landing_sound
     
     #$a0, $a1, $a2, $t0, $t1, $t2 are used to store some basic numbers/addresses (check line41-49), so don't alter the content of these registers
     
@@ -157,83 +157,13 @@ check_lines:        #checks the current row
 erase:
     #at this point, $t5 is storing the current line number
     # I will reset the address store in $t3
-    
     mult $t3 $t5 $t2        #t3 = t5*48
     add $t3 $t3 $t0     #first unit in row to erase
     addi $t3 $t3 4      #skip the wall
-    
     add $t6 $zero $t5       #t6 is a temporary variable that stores the line num so we dont need to change the content of $t5
     li $t4 0        #when $t4 go to 10, we jump to the line above
-    j animation
-
-animation:
-    li $t7 0xffffff #white
-    sw $t7 0($t3)
-    sw $t7 4($t3)
-    sw $t7 8($t3)
-    sw $t7 12($t3)
-    sw $t7 16($t3)
-    sw $t7 20($t3)
-    sw $t7 24($t3)
-    sw $t7 28($t3)
-    sw $t7 32($t3)
-    sw $t7 36($t3)
-    j sleep1
-continue_animation:
-    sw $a2 0($t3)
-    sw $a2 4($t3)
-    sw $a2 8($t3)
-    sw $a2 12($t3)
-    sw $a2 16($t3)
-    sw $a2 20($t3)
-    sw $a2 24($t3)
-    sw $a2 28($t3)
-    sw $a2 32($t3)
-    sw $a2 36($t3)
-    j sleep2
-continue_animation2:
-    sw $t7 0($t3)
-    sw $t7 4($t3)
-    sw $t7 8($t3)
-    sw $t7 12($t3)
-    sw $t7 16($t3)
-    sw $t7 20($t3)
-    sw $t7 24($t3)
-    sw $t7 28($t3)
-    sw $t7 32($t3)
-    sw $t7 36($t3)
-    j sleep3
-    
-
-sleep3:
-    li $t8, 0                # Loop counter
-    li $t9, 500000         # Approximate loop count for 1 second; adjust as needed for your system
-    j sleep_loop3
-    
-sleep_loop3:
-    addi $t8, $t8, 1         # Increment loop counter
-    beq $t8, $t9, erase_loop # Keep looping until the counter reaches the target
-    j sleep_loop3
-    
-sleep2:
-    li $t8, 0                # Loop counter
-    li $t9, 500000        # Approximate loop count for 1 second; adjust as needed for your system
-    j sleep_loop2
-    
-sleep_loop2:
-    addi $t8, $t8, 1         # Increment loop counter
-    beq $t8, $t9, continue_animation2 # Keep looping until the counter reaches the target
-    j sleep_loop2
-    
-sleep1:
-    li $t8, 0                # Loop counter
-    li $t9, 5000000         # Approximate loop count for 1 second; adjust as needed for your system
-    j sleep_loop
-    
-sleep_loop:
-    addi $t8, $t8, 1         # Increment loop counter
-    beq $t8, $t9, continue_animation # Keep looping until the counter reaches the target
-    j sleep_loop
+    jal line_completed_sound
+    j erase_loop
 
 reset_erase_loop:
     addi $t6 $t6 -1     #decrement row number
@@ -277,10 +207,11 @@ back_to_checkline:      #start again at beginning row
     j check_lines
     
     
-move:#use to make moves for tetraminos
+move:       #use to make moves for tetraminos
 #set up for moving tetraminos
-    li $t4 0 #default orientation: horizontal
-    li $t3 16#address of the first unit of the tetramino
+    jal check_game_over
+    li $t4 0        #default orientation: horizontal
+    li $t3 16       #address of the first unit of the tetramino
     add $t3 $t3 $t0
     #draw the tetramino at the top of the bitmap
     sw $a2 0($t3)
@@ -289,6 +220,33 @@ move:#use to make moves for tetraminos
     sw $a2 12($t3)
      
     j check_keypress
+    
+check_game_over:
+    lw $t6, 4($t0)
+    beq $t6, $a2, game_over
+    lw $t6, 8($t0)
+    beq $t6, $a2, game_over
+    lw $t6, 12($t0)
+    beq $t6, $a2, game_over
+    lw $t6, 16($t0)
+    beq $t6, $a2, game_over
+    lw $t6, 20($t0)
+    beq $t6, $a2, game_over
+    lw $t6, 24($t0)
+    beq $t6, $a2, game_over
+    lw $t6, 28($t0)
+    beq $t6, $a2, game_over
+    lw $t6, 32($t0)
+    beq $t6, $a2, game_over
+    lw $t6, 36($t0)
+    beq $t6, $a2, game_over
+    lw $t6, 40($t0)
+    beq $t6, $a2, game_over
+    jr $ra
+    
+game_over:
+    jal game_over_sound
+    j draw_pause_symbol
     
 check_keypress:     #check if key has been pressed
 	lw $t8, 0($t1)                  #load first word from keyboard
@@ -735,7 +693,40 @@ respond_to_q:
     li $v0, 10      #quit game
 	syscall
     
-   
-
+game_over_sound:
+    li $v0, 31      #async play note syscall
+    li $a0, 30      #midi pitch
+    li $a1, 1000        #duration
+    li $a2, 13      #instrument
+    li $a3, 100     #volume
+    syscall
+    li $a0, 0x0000ff        #store blue for painting wall
+    li $a1, 0x1f1f1f        #store grey for painting grids
+    li $a2, 0xff0000        #store red for drawing the tetramino
+    jr $ra
+    
+line_completed_sound:
+    li $v0, 31      #async play note syscall
+    li $a0, 50      #midi pitch
+    li $a1, 100     #duration
+    li $a2, 19      #instrument
+    li $a3, 100     #volume
+    syscall
+    li $a0, 0x0000ff        #store blue for painting wall
+    li $a1, 0x1f1f1f        #store grey for painting grids
+    li $a2, 0xff0000        #store red for drawing the tetramino
+    jr $ra
+    
+block_landing_sound:
+    li $v0, 31      #async play note syscall
+    li $a0, 40      #midi pitch
+    li $a1, 2       #duration
+    li $a2, 13      #instrument
+    li $a3, 100     #volume
+    syscall
+    li $a0, 0x0000ff        #store blue for painting wall
+    li $a1, 0x1f1f1f        #store grey for painting grids
+    li $a2, 0xff0000        #store red for drawing the tetramino
+    jr $ra
 
 exit:
