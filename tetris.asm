@@ -271,11 +271,28 @@ draw_red:       #paint the unit red
     j continue_erase_loop
     
 back_to_checkline:      #start again at beginning row
+    j redraw_first_line
+    
+back_to_checkline_continue:
     mult $t3 $t5 $t2 #t3 = t5*48
     add $t3 $t3 $t0
     addi $t3 $t3 4
     li $t4 0
     j check_lines
+    
+redraw_first_line:
+    li $t7 0x000000
+    sw $t7 8($t0)
+    sw $t7 16($t0)
+    sw $t7 24($t0)
+    sw $t7 32($t0)
+    sw $t7 40($t0)
+    sw $a1 4($t0)
+    sw $a1 12($t0)
+    sw $a1 20($t0)
+    sw $a1 28($t0)
+    sw $a1 36($t0)
+    j back_to_checkline_continue
     
     
 move:       #use to make moves for tetraminos
