@@ -584,6 +584,7 @@ respond_to_a_horizontal:
 
     
 respond_to_w:       #rotation
+    jal rotation_sound
     beq $t4, 0, handle_rotation_horizontal0
     beq $t4, 1, handle_rotation_vertical1
     beq $t4, 2, handle_rotation_horizontal2
@@ -783,9 +784,9 @@ respond_to_q:
     
 game_over_sound:
     li $v0, 31      #async play note syscall
-    li $a0, 30      #midi pitch
-    li $a1, 1000        #duration
-    li $a2, 13      #instrument
+    li $a0, 50      #midi pitch
+    li $a1, 50       #duration
+    li $a2, 14      #instrument
     li $a3, 100     #volume
     syscall
     li $a0, 0x0000ff        #store blue for painting wall
@@ -810,6 +811,18 @@ block_landing_sound:
     li $a0, 40      #midi pitch
     li $a1, 2       #duration
     li $a2, 13      #instrument
+    li $a3, 100     #volume
+    syscall
+    li $a0, 0x0000ff        #store blue for painting wall
+    li $a1, 0x1f1f1f        #store grey for painting grids
+    li $a2, 0xff0000        #store red for drawing the tetramino
+    jr $ra
+
+rotation_sound:
+    li $v0, 31      #async play note syscall
+    li $a0, 90      #midi pitch
+    li $a1, 1       #duration
+    li $a2, 17      #instrument
     li $a3, 100     #volume
     syscall
     li $a0, 0x0000ff        #store blue for painting wall
