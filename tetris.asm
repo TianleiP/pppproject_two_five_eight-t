@@ -35,8 +35,8 @@ pause_symbol:
 	.text
 	.globl main
 
-# Run the Tetris game.
-main:
+# Run the Tetris game.    
+main:    
 
 #initialize the game
 li $a0, 0x0000ff        #store blue for painting wall
@@ -334,7 +334,18 @@ check_game_over:
     
 game_over:
     jal game_over_sound
-    j draw_pause_symbol
+    jal draw_game_over
+    j check_restart
+    
+check_restart:
+    lw $t8, 0($t1)                  #load first word from keyboard
+	beq $t8, 1, check_if_r      #if first word 1, key is pressed
+	j check_restart
+	
+check_if_r:
+    lw $t9, 4($t1)                  #load second word from keyboard
+    beq $t9, 114, initialize_reset_playfield      #check if the key r was pressed and if so rerun main
+    j check_restart
     
 check_keypress:     #check if key has been pressed
 	lw $t8, 0($t1)                  #load first word from keyboard
@@ -828,6 +839,58 @@ rotation_sound:
     li $a0, 0x0000ff        #store blue for painting wall
     li $a1, 0x1f1f1f        #store grey for painting grids
     li $a2, 0xff0000        #store red for drawing the tetramino
+    jr $ra
+
+initialize_reset_playfield:
+    lw $s6, ADDR_DSPL    # Load the base address of the display into $a0
+    li $s7, 0              # Counter for squares
+    li $a3, 0x000000       # Color black
+    
+    j reset_play_field
+
+reset_play_field:
+    beq $s7, 252, main
+    sw $a3, 0($s6)
+
+    addi $s7, $s7, 1
+    addi $s6, $s6, 4
+    j reset_play_field
+
+draw_game_over:
+    #initialize GG symbol stuff
+    li $a3, 0xffffff
+    li $s1, 212
+    add $s1, $s1, $t0
+    #draw first G
+    sw $a3, 0($s1)
+    sw $a3, 4($s1)
+    sw $a3, 8($s1)
+    sw $a3, 44($s1)
+    sw $a3, 92($s1)
+    sw $a3, 100($s1)
+    sw $a3, 104($s1)
+    sw $a3, 140($s1)
+    sw $a3, 152($s1)
+    sw $a3, 192($s1)
+    sw $a3, 196($s1)
+    sw $a3, 200($s1)
+    #draw second G
+    addi $s1, $s1, 288
+    sw $a3, 0($s1)
+    sw $a3, 4($s1)
+    sw $a3, 8($s1)
+    sw $a3, 44($s1)
+    sw $a3, 92($s1)
+    sw $a3, 100($s1)
+    sw $a3, 104($s1)
+    sw $a3, 140($s1)
+    sw $a3, 152($s1)
+    sw $a3, 192($s1)
+    sw $a3, 196($s1)
+    sw $a3, 200($s1)
+    
+    lw $t1, ADDR_KBRD       #reload keyboard address
+
     jr $ra
 
 exit:
