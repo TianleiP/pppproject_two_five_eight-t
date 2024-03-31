@@ -446,14 +446,14 @@ delay_one_second:
     li $t7, 0                #initialize counter
     li $t9, 10000000         #set up loop count for time
     sub $t9, $t9, $s3       #subtract value from loop counter to decrease time loop for current speed
-    bge $t9, 1000001, shorten_delay     #if time loop is greater than 1000001 shorten delay loop(increase speed)
+    bge $t9, 1500001, shorten_delay     #if time loop is greater than 1000001 shorten delay loop(increase speed)
 
     jal delay_loop      #start delay loop
 
     j check_keypress        #jump to key input when loop is complete
     
 shorten_delay:      #decrease delay to increase speed
-    addi $s3, $s3, 10000       #increment value to subtract from time loop(increase speed); change this value to increase/decrease speed acceler
+    addi $s3, $s3, 100000       #increment value to subtract from time loop(increase speed); change this value to increase/decrease speed acceler
     jal delay_loop      #start delay loop
     j check_keypress
     
