@@ -97,7 +97,7 @@ reset_loop_draw_grid:       #reset the loop index to zero, increment $t3 to keep
     
 draw_grid:
     bge $t4, 5, reset_loop_draw_grid     #finished with row, reset initializations for next two rows
-    bge $t3, 10, game_loop      #after finishing the grid, we successfully set up the bitmap and go to the game loop
+    bge $t3, 10, draw_red_lines     #after finishing the grid, we successfully set up the bitmap and go to the game loop
     addi $t4 $t4 1      #increment row loop counter
     sw $a1 0($t5)       #paint grid unit of first current row grey
     sw $a1 0($t6)       #paint grid unit of second current row grey
@@ -106,7 +106,97 @@ draw_grid:
     j draw_grid     #reloop to paint next two rows
     
     #the play field is drawn
- 
+draw_red_lines:
+li $t5 0
+li $t4 0
+li $t3 724
+add $t3 $t3 $t0
+j draw_red_lines_loop
+
+
+
+draw_red_lines_loop:
+    beq $t4 10 reset_redline
+    addi $t4 $t4 1
+    sw $a2 0($t3)
+    addi $t3 $t3 4
+    j draw_red_lines_loop
+    
+
+reset_redline:
+    li $t4 0
+    addi $t5 $t5 1
+    addi $t3 $t3 8
+    beq $t5 5 draw_random_lines
+    j draw_red_lines_loop
+    
+
+
+draw_random_lines:#draw five random line at the bottom
+    li $v0 42
+    li $a0 0
+    li $a1 5
+    syscall
+    add $t3 $a0 $zero
+    sll $t3, $t3, 3
+    add $t3 $t3 $t0
+    addi $t3 $t3 724
+    li $t4 0x000000
+    sw $t4 0($t3)
+    
+    li $v0 42
+    li $a0 0
+    li $a1 5
+    syscall
+    add $t4 $a0 $zero
+    sll $t4, $t4, 3
+    add $t4 $t4 $t0
+    addi $t4 $t4 772
+    li $t3 0x1f1f1f
+    sw $t3 0($t4)
+    
+    li $v0 42
+    li $a0 0
+    li $a1 5
+    syscall
+    add $t5 $a0 $zero
+    sll $t5, $t5, 3
+    add $t5 $t5 $t0
+    addi $t5 $t5 820
+    li $t3 0x000000
+    sw $t3 0($t5)
+    
+    add $t5 $a0 $zero
+    sll $t5, $t5, 1
+    li $v0 42
+    li $a0 0
+    li $a1 5
+    syscall
+    add $t6 $a0 $zero
+    sll $t6, $t6, 3
+    add $t6 $t6 $t0
+    addi $t6 $t6 868
+    li $t3 0x1f1f1f
+    sw $t3 0($t6)
+    
+    add $t6 $a0 $zero
+    sll $t6, $t6, 1
+    li $v0 42
+    li $a0 0
+    li $a1 5
+    syscall
+    add $t7 $a0 $zero
+    sll $t7, $t7, 3
+    add $t7 $t7 $t0
+    addi $t7 $t7 916
+    li $t3 0x000000
+    sw $t3 0($t7)
+    
+    #reset variables
+    li $a0, 0x0000ff        #store blue for painting wall
+    li $a1, 0x1f1f1f        #store grey for painting grids
+    li $a2, 0xff0000        #store red for drawing the tetramino
+    j game_loop
 #variable usage: 
 #$t0 is for offset of the bitmap
 #$t1 is for offset of keyboard input
